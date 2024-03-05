@@ -42,6 +42,10 @@ class CyclicTask(abc.ABC):
     Abstract Base for all cyclic tasks.
     """
 
+    def __init__(self, **kwargs) -> None:
+        self.stopped = True
+        super().__init__(**kwargs)
+
     @abc.abstractmethod
     def stop(self) -> None:
         """Cancel this periodic task.
@@ -57,7 +61,7 @@ class CyclicSendTaskABC(CyclicTask, abc.ABC):
     """
 
     def __init__(
-        self, messages: Union[Sequence[Message], Message], period: float
+        self, messages: Union[Sequence[Message], Message], period: float, **kwargs,
     ) -> None:
         """
         :param messages:
@@ -73,6 +77,7 @@ class CyclicSendTaskABC(CyclicTask, abc.ABC):
         self.period = period
         self.period_ns = int(round(period * 1e9))
         self.messages = messages
+        super().__init__(**kwargs)
 
     @staticmethod
     def _check_and_convert_messages(
@@ -118,6 +123,7 @@ class LimitedDurationCyclicSendTaskABC(CyclicSendTaskABC, abc.ABC):
         messages: Union[Sequence[Message], Message],
         period: float,
         duration: Optional[float],
+        **kwargs,
     ) -> None:
         """Message send task with a defined duration and period.
 
@@ -130,7 +136,7 @@ class LimitedDurationCyclicSendTaskABC(CyclicSendTaskABC, abc.ABC):
 
         :raises ValueError: If the given messages are invalid
         """
-        super().__init__(messages, period)
+        super().__init__(messages=messages, period=period, **kwargs)
         self.duration = duration
 
 
@@ -196,6 +202,7 @@ class MultiRateCyclicSendTaskABC(CyclicSendTaskABC, abc.ABC):
         count: int,  # pylint: disable=unused-argument
         initial_period: float,  # pylint: disable=unused-argument
         subsequent_period: float,
+        **kwargs,
     ) -> None:
         """
         Transmits a message `count` times at `initial_period` then continues to
@@ -209,7 +216,7 @@ class MultiRateCyclicSendTaskABC(CyclicSendTaskABC, abc.ABC):
 
         :raises ValueError: If the given messages are invalid
         """
-        super().__init__(messages, subsequent_period)
+        super().__init__(messages=messages, period=subsequent_period, **kwargs)
         self._channel = channel
 
 
@@ -227,6 +234,7 @@ class ThreadBasedCyclicSendTask(
         duration: Optional[float] = None,
         on_error: Optional[Callable[[Exception], bool]] = None,
         modifier_callback: Optional[Callable[[Message], None]] = None,
+        **kwargs,
     ) -> None:
         """Transmits `messages` with a `period` seconds for `duration` seconds on a `bus`.
 
@@ -243,7 +251,7 @@ class ThreadBasedCyclicSendTask(
 
         :raises ValueError: If the given messages are invalid
         """
-        super().__init__(messages, period, duration)
+        super().__init__(messages=messages, period=period, duration=duration, **kwargs)
         self.bus = bus
         self.send_lock = lock
         self.stopped = True

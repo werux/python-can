@@ -343,6 +343,7 @@ class CyclicSendTask(
         self.bcm_socket = bcm_socket
         self.task_id = task_id
         self._tx_setup(self.messages)
+        self.stopped = False
 
     def _tx_setup(
         self, messages: Sequence[Message], raise_if_task_exists: bool = True
@@ -410,10 +411,14 @@ class CyclicSendTask(
         with the specified ``task_id`` identifier. The message length
         for the command TX_DELETE is {[bcm_msg_head]} (only the header).
         """
+        if self.stopped:
+            return
+
         log.debug("Stopping periodic task")
 
         stopframe = build_bcm_tx_delete_header(self.task_id, self.flags)
         send_bcm(self.bcm_socket, stopframe)
+        self.stopped = True
 
     def modify_data(self, messages: Union[Sequence[Message], Message]) -> None:
         """Update the contents of the periodically sent CAN messages by
@@ -452,6 +457,7 @@ class CyclicSendTask(
             If the task referenced by ``task_id`` is already running.
         """
         self._tx_setup(self.messages, raise_if_task_exists=False)
+        self.stopped = False
 
 
 class MultiRateCyclicSendTask(CyclicSendTask):
